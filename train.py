@@ -1,19 +1,11 @@
 
 # coding: utf-8
-
-# In[1]:
-
-
 import pickle
 import numpy as np
-import matplotlib.pyplot as plt
-import math
 from sklearn.metrics import classification_report
-from sklearn.model_selection import train_test_split
 import idx2numpy
-import copy
-import pickle
 import argparse
+import time
 
 
 parser = argparse.ArgumentParser()
@@ -21,66 +13,6 @@ parser.add_argument('--x_train_dir', default='train-images.idx3-ubyte')
 parser.add_argument('--y_train_dir', default='train-labels.idx1-ubyte')
 parser.add_argument('--model_output_dir', default='weights.pkl')
 args = parser.parse_args()
-# In[2]:
-
-
-train_images = idx2numpy.convert_from_file(args.x_train_dir)
-y_train_ = idx2numpy.convert_from_file("train-labels.idx1-ubyte")
-
-train_examples = train_images.shape[0]
-
-
-
-
-# In[3]:
-
-
-X_train_ = train_images.copy().reshape(-1, 784) / 255
-
-del train_images
-
-
-
-# In[4]:
-
-
-squares_train = X_train_**2
-
-
-
-# In[5]:
-
-
-X_train = np.hstack((X_train_, squares_train))
-
-del X_train_, squares_train
-
-
-# In[6]:
-
-
-
-
-# In[7]:
-
-
-# In[8]:
-
-
-
-X_train /= 256
-
-
-
-# In[9]:
-
-
-y_train = np.hstack((((y_train_ == i) + 0).reshape(-1, 1) for i in range(10)))
-
-
-
-
-# In[11]:
 
 
 def cross_entropy(X, y, w):
@@ -90,9 +22,6 @@ def cross_entropy(X, y, w):
     predict /= sums
     ans = np.sum(np.log(predict) * y)
     return -ans / X.shape[0], predict
-
-
-# In[12]:
 
 
 def num_grad(X, y, w):
@@ -108,51 +37,67 @@ def num_grad(X, y, w):
     return np.array(ans).reshape(-1, 1), cross_en
 
 
-# In[13]:
-
-
-def predict_point(record, w):
-    predict = np.exp(np.dot(record, w.T))
-    sums = predict.sum()
+def predict_batch(batch, w):
+    predict = np.exp(np.dot(batch, w.T))
+    sums = predict.sum(axis=1, keepdims=True)
     predict /= sums
     return predict
 
 
-# In[18]:
-
-
-def sgrad(record, y, w):
-    predict = predict_point(record, w)
+def sgrad(X, y, w):
+    predict = predict_batch(X, w)
     assert predict.shape == y.shape
-    t = (predict - y).reshape(-1, 1)
-    Record = record.reshape(-1, 1)
-    der = np.dot(t, Record.T)
-    return der.reshape(10, -1)
+    t = (predict - y)
+    #X = X.reshape(-1, 1)
+    der = np.dot(t.T, X)
+
+    del predict, t
+    return der.reshape(10, -1) / X.shape[0]
 
 
-# In[ ]:
+def add_noize(objec):
+    ans = np.zeros((28, 28))
+    for i in range(1, 27):
+        for j in range(1, 27):
+            cell = objec[i][j]
+            ans[i][j] = min(255, (cell + (objec[i-1][j-1]+objec[i-1][j]+objec[i-1][j+1]+objec[i][j-1]+objec[i][j+1]+objec[i+1][j-1]+objec[i+1][j]+objec[i+1][j+1])/8)/2)
+    return ans
 
 
-num_iter = 1200
-import time
+train_images = idx2numpy.convert_from_file(args.x_train_dir).astype(int)
+y_train_ = idx2numpy.convert_from_file(args.y_train_dir)
+#new_test_images = np.vstack((train_images, 
+ #                            np.array([add_noize(image) for image in train_images])))
+X_train_ = train_images.copy().reshape(-1, 784) / 255
+del train_images
+squares_train = X_train_**2
+X_train = np.hstack((X_train_, squares_train))
+del X_train_, squares_train
+y_train = np.hstack((((y_train_ == i) + 0).reshape(-1, 1) for i in range(10)))
+
+num_iter = 2500
 h = time.clock()
-learning_rate = 2
+learning_rate = 0.03
+batch_size = 32
 # w = (np.random.random((10, 784))) * 0.001 
-w = np.random.random((10, 784*2)) * 0.001
-
+w = np.random.random((10, X_train.shape[1])) * 0.001
+start = time.clock()
 i = 0
+num_train = X_train.shape[0]
+t = num_train - num_train // batch_size
+lambd = 0.001
+beta = 0.999
 for epoch in range(num_iter):
-    for i in range(60000):
-        grads = sgrad(X_train[i], y_train[i], w)
-        w -= learning_rate * grads
-
+    for i in range(0, num_train // batch_size):
+        grads = sgrad(X_train[i * batch_size : (i+1) * batch_size],
+                      y_train[i * batch_size : (i+1) * batch_size], w)
+        w = (1 - lambd * beta**epoch * learning_rate / batch_size) * w - learning_rate * beta**epoch * grads
+    grads = sgrad(X_train[t : num_train],
+                  y_train[t : num_train], w)
+    w = (1 - lambd * beta**epoch * learning_rate / batch_size) * w - learning_rate * beta**epoch * grads
+    
 cross_en1, pred1 = cross_entropy(X_train, y_train, w)
 print(classification_report(np.argmax(pred1, axis=1), y_train_))
 
 with open(args.model_output_dir, "wb") as fout:
     pickle.dump(w, fout)
-        
-
-
-
-
