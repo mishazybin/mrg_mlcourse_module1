@@ -71,8 +71,9 @@ y_test_ = idx2numpy.convert_from_file(args.y_test_dir)
 X_test_ = test_images.copy().reshape(-1, 784) / 255
 del test_images
 squares_test = X_test_**2
-X_test = np.hstack((X_test_, squares_test))
-del  X_test_, squares_test
+cubes_test = X_test_ ** 3
+X_test = np.hstack((X_test_, squares_test, cubes_test))
+del X_test_, squares_test, cubes_test
 y_test = np.hstack((((y_test_ == i) + 0).reshape(-1, 1) for i in range(10)))
 cross_en2, pred2 = cross_entropy(X_test, y_test, w)
 print(classification_report(np.argmax(pred2, axis=1), y_test_))

@@ -71,11 +71,12 @@ y_train_ = idx2numpy.convert_from_file(args.y_train_dir)
 X_train_ = train_images.copy().reshape(-1, 784) / 255
 del train_images
 squares_train = X_train_**2
-X_train = np.hstack((X_train_, squares_train))
-del X_train_, squares_train
+cubes_train = X_train_ ** 3
+X_train = np.hstack((X_train_, squares_train, cubes_train))
+del X_train_, squares_train, cubes_train
 y_train = np.hstack((((y_train_ == i) + 0).reshape(-1, 1) for i in range(10)))
 
-num_iter = 2500
+num_iter = 1500
 h = time.clock()
 learning_rate = 0.03
 batch_size = 32
