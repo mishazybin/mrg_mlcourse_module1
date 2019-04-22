@@ -55,12 +55,16 @@ def sgrad(X, y, w):
     return der.reshape(10, -1) / X.shape[0]
 
 
-def add_noize(objec):
+def add_noize(picture):
     ans = np.zeros((28, 28))
     for i in range(1, 27):
         for j in range(1, 27):
-            cell = objec[i][j]
-            ans[i][j] = min(255, (cell + (objec[i-1][j-1]+objec[i-1][j]+objec[i-1][j+1]+objec[i][j-1]+objec[i][j+1]+objec[i+1][j-1]+objec[i+1][j]+objec[i+1][j+1])/8)/2)
+            cell = picture[i][j]
+            neighbors_average = 0
+            for (di, dj) in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
+                neighbors_average += picture[i + di][j + dj]
+            neighbors_average /= 8
+            ans[i][j] = min(255, (cell + neighbors_average) / 2)
     return ans
 
 
