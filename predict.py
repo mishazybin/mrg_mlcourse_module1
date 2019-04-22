@@ -54,14 +54,8 @@ def sgrad(record, y, w):
     return der.reshape(10, -1)
 
 
-def denoize(objec):
-    ans = np.zeros((28, 28))
-    for i in range(28):
-        for j in range(28):
-            cell = objec[i][j]
-            ans[i][j] = cell // 32 * 32
-    return ans
-
+def denoize(picture):
+    return (picture // 32) * 32
 
 with open(args.model_input_dir, "rb") as fin:
     w = pickle.load(fin)
